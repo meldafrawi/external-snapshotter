@@ -1,0 +1,116 @@
+kind: pipeline
+name: default-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: fetch
+  image: alpine/git
+  commands:
+  - git fetch --tags
+
+- name: build
+  image: golang:1.13.3-alpine
+  commands:
+  - apk add --no-cache --update build-base bash git
+  - mkdir -p bin
+  - wget https://github.com/golang/dep/releases/download/v0.5.1/dep-linux-amd64 -O bin/dep
+  - chmod u+x bin/dep
+  - export PATH=$PWD/bin:$PATH
+  - GOFLAGS_VENDOR=$( [ -d vendor ] && echo '-mod=vendor' ) make
+
+- name: publish-amd64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=amd64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/csi-snapshotter
+    tag: "${DRONE_BRANCH}-amd64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - lh-10132020
+    event:
+    - push
+---
+kind: pipeline
+name: default-arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+- name: fetch
+  image: arm64v8/alpine
+  commands:
+  - apk add git
+  - git fetch --tags
+
+- name: build
+  image: golang:1.13.3-alpine
+  commands:
+  - apk add --no-cache --update build-base bash git
+  - mkdir -p bin
+  - wget https://github.com/golang/dep/releases/download/v0.5.1/dep-linux-arm64 -O bin/dep
+  - chmod u+x bin/dep
+  - export PATH=$PWD/bin:$PATH
+  - GOFLAGS_VENDOR=$( [ -d vendor ] && echo '-mod=vendor' ) make
+
+- name: publish-arm64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/csi-snapshotter
+    tag: "${DRONE_BRANCH}-arm64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - lh-10132020
+    event:
+    - push
+---
+kind: pipeline
+name: manifest
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: manifest
+  image: plugins/manifest:1
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    target: "longhornio/csi-snapshotter:${DRONE_BRANCH}"
+    template: "longhornio/csi-snapshotter:${DRONE_BRANCH}-ARCH"
+  when:
+    instance:
+    - drone-publish.longhorn.io
+    branch:
+    - lh-10132020
+    event:
+    - push
+
+depends_on:
+- default-amd64
+- default-arm64
