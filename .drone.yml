@@ -27,7 +27,7 @@ steps:
     build_args:
     - ARCH=amd64
     custom_dns: 1.1.1.1
-    dockerfile: Dockerfile
+    dockerfile: ./cmd/csi-snapshotter/Dockerfile
     password:
       from_secret: docker_password
     repo: longhornio/csi-snapshotter
@@ -70,7 +70,7 @@ steps:
     build_args:
     - ARCH=arm64
     custom_dns: 1.1.1.1
-    dockerfile: Dockerfile
+    dockerfile: ./cmd/csi-snapshotter/Dockerfile
     password:
       from_secret: docker_password
     repo: longhornio/csi-snapshotter
