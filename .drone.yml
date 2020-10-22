@@ -39,6 +39,25 @@ steps:
     - lh-10132020
     event:
     - push
+
+- name: publish-tagged-amd64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=amd64
+    custom_dns: 1.1.1.1
+    dockerfile: ./cmd/csi-snapshotter/Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/csi-snapshotter
+    tag: "${DRONE_TAG}-amd64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - lh-10132020
+    event:
+    - tag
 ---
 kind: pipeline
 name: default-arm64
@@ -82,6 +101,25 @@ steps:
     - lh-10132020
     event:
     - push
+
+- name: publish-tagged-arm64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    custom_dns: 1.1.1.1
+    dockerfile: ./cmd/csi-snapshotter/Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/csi-snapshotter
+    tag: "${DRONE_TAG}-arm64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - lh-10132020
+    event:
+    - tag
 ---
 kind: pipeline
 name: manifest
@@ -91,7 +129,7 @@ platform:
   arch: amd64
 
 steps:
-- name: manifest
+- name: create image manifest
   image: plugins/manifest:1
   settings:
     username:
@@ -110,6 +148,26 @@ steps:
     - lh-10132020
     event:
     - push
+
+- name: create tagged image manifest
+  image: plugins/manifest:1
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    target: "longhornio/csi-snapshotter:${DRONE_TAG}"
+    template: "longhornio/csi-snapshotter:${DRONE_TAG}-ARCH"
+  when:
+    instance:
+    - drone-publish.longhorn.io
+    branch:
+    - lh-10132020
+    event:
+    - tag
 
 depends_on:
 - default-amd64
